@@ -123,7 +123,7 @@ void stripNL(char *str)
         str[NLIdx] = '\0';
 }
 
-int laodDB(char *filename)
+int loadDB(char *filename)
 {
     FILE *fp = fopen(filename, "r");
 

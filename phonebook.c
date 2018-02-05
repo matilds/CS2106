@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
   initPhonebook(numRecords);
   printf("Hello, welcome to Phonebook!\n");
   showMenu();
-  printf("\nGoodbye!");
+  printf("\nGoodbye!\n");
 
   // Returning 0 indicates success
   return 0;
