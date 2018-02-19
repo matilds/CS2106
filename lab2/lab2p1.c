@@ -226,21 +226,18 @@ void startServer(uint16_t portNum)
                 writeLog("Connection received");
                 
                 int cpid;
-                int status;
                 
                 if((cpid = fork()) != 0)
                     {
                         close(connfd);
-                        //wait(&status);
                     }
                 else
                     {
                         close(listenfd);
                         deliverHTTP(connfd);
                         close(connfd);
-                        //exit(0);
                     }
-
+                
 		//deliverHTTP(connfd);
 	}
 }
