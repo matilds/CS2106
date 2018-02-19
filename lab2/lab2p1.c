@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <stdarg.h>
+#include <sys/wait.h>
 
 // Port Number
 #define PORTNUM			80
@@ -192,7 +193,7 @@ void startServer(uint16_t portNum)
 
 
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
-
+        
 	if(listenfd<0)
 	{
 		perror("Unable to make socket.");
@@ -222,8 +223,24 @@ void startServer(uint16_t portNum)
 	while(1)
 	{
 		connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
-		writeLog("Connection received.");
+                writeLog("Connection received");
+                
+                int cpid;
+                int status;
+                
+                if((cpid = fork()) != 0)
+                    {
+                        close(connfd);
+                        //wait(&status);
+                    }
+                else
+                    {
+                        close(listenfd);
+                        deliverHTTP(connfd);
+                        close(connfd);
+                        //exit(0);
+                    }
 
-		deliverHTTP(connfd);
+		//deliverHTTP(connfd);
 	}
 }
