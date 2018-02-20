@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     else
         {
             int status;
-            // Parent should close input side of the pipe
+            // Parent should close input side of the pipe // Send to child
             close (fd[0]);
 
             // Write to the pipe

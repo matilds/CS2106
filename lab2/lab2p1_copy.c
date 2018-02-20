@@ -47,31 +47,9 @@ char *getCurrentTime();
 void writeLog(const char *format, ...);
 void parseHTTP(const char *buffer, int *method, char *filename);
 
-// Global variable for pipe file descriptor
-int fd[2];
-                    
 int main(int ac, char **av)
 {
 	startServer(PORTNUM);
-
-        int n;
-        char buffer[1024];
-
-        if(fork() == 0)
-          {
-            //Child should close the output side of the pipe
-            close(fd[1]);
-
-            //Read from the pipe
-            n = read(fd[0], buffer, MAX_BUFFER_LEN);
-            printf("Child read %d bytes from parent: %s\n", n, buffer);
-
-            FILE *fptr = fopen("log.txt", "w");
-            fprintf(fptr,"%s", buffer);
-            close(fd[0]);
-
-            fclose(fptr);
-          }
 }
 
 char *getCurrentTime()
@@ -197,7 +175,6 @@ void deliverHTTP(int connfd)
 
 void writeLog(const char *format, ...)
 {
-  
 	char logBuffer[LOG_BUFFER_LEN];
 	va_list args;
 	
@@ -207,20 +184,6 @@ void writeLog(const char *format, ...)
 
 	printf("%s: %s\n", getCurrentTime(), logBuffer);
 
-
-        int status;
-        int n;
-        char buffer[1024];
-        
-        close(fd[0]);
-
-        sprintf(buffer, "%s: %s\n", getCurrentTime(), logBuffer);
-        n = write(fd[1], buffer, strlen(buffer)+1);
-        printf("Parent wrote %d bytes to the child: %s\n", n, buffer);
-        
-        close(fd[1]);
-
-        wait(&status);
 }
 
 void startServer(uint16_t portNum)
