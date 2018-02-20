@@ -52,13 +52,12 @@ int fd[2];
                     
 int main(int ac, char **av)
 {
-	startServer(PORTNUM);
+    pipe(fd);
+    int n;
+    char buffer[1024];
 
-        int n;
-        char buffer[1024];
-
-        if(fork() == 0)
-          {
+    if(fork() == 0)
+        {
             //Child should close the output side of the pipe
             close(fd[1]);
 
@@ -71,7 +70,11 @@ int main(int ac, char **av)
             close(fd[0]);
 
             fclose(fptr);
-          }
+        }
+    /*else
+      {*/
+            startServer(PORTNUM);
+            /*   }*/
 }
 
 char *getCurrentTime()
