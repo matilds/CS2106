@@ -53,28 +53,38 @@ int fd[2];
 int main(int ac, char **av)
 {
     pipe(fd);
+    
+    int status;
     int n;
     char buffer[1024];
 
-    if(fork() == 0)
+    int id = fork();
+
+    if(id == 0)
         {
+
             //Child should close the output side of the pipe
             close(fd[1]);
-
-            //Read from the pipe
-            n = read(fd[0], buffer, MAX_BUFFER_LEN);
-            printf("Child read %d bytes from parent: %s\n", n, buffer);
-
+            
             FILE *fptr = fopen("log.txt", "w");
-            fprintf(fptr,"%s", buffer);
-            close(fd[0]);
+            
+            //Read from the pipe
+            while((n = read(fd[0], buffer, MAX_BUFFER_LEN)>0))
+                {
+                    printf("Child read %d bytes from parent: %s\n", n, buffer);
+                    fprintf(fptr,"%s", buffer);
+                    fflush(fptr);
+                }
 
+            close(fd[0]);
             fclose(fptr);
         }
-    /*else
-      {*/
-            startServer(PORTNUM);
-            /*   }*/
+    else
+      {
+          close(fd[0]);
+          startServer(PORTNUM);
+          wait(&status);
+      }
 }
 
 char *getCurrentTime()
@@ -126,7 +136,7 @@ void readHTML(FILE *fp, char *fileBuffer, uint16_t maxBufferLen)
 
 void parseHTTP(const char *buffer, int *method, char *filename)
 {
-	char tmpBuffer[MAX_BUFFER_LEN];
+    char tmpBuffer[MAX_BUFFER_LEN];
 	char *mtd, *fname;
 
 	strncpy(tmpBuffer, buffer, MAX_BUFFER_LEN);
@@ -211,19 +221,13 @@ void writeLog(const char *format, ...)
 	printf("%s: %s\n", getCurrentTime(), logBuffer);
 
 
-        int status;
         int n;
         char buffer[1024];
-        
-        close(fd[0]);
 
         sprintf(buffer, "%s: %s\n", getCurrentTime(), logBuffer);
         n = write(fd[1], buffer, strlen(buffer)+1);
         printf("Parent wrote %d bytes to the child: %s\n", n, buffer);
-        
-        close(fd[1]);
 
-        wait(&status);
 }
 
 void startServer(uint16_t portNum)
@@ -263,6 +267,7 @@ void startServer(uint16_t portNum)
 	while(1)
 	{
 		connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
+
                 writeLog("Connection received");
                 
                 int cpid;
@@ -276,6 +281,7 @@ void startServer(uint16_t portNum)
                         close(listenfd);
                         deliverHTTP(connfd);
                         close(connfd);
+                        close(fd[1]);
                     }
                 
 		//deliverHTTP(connfd);
