@@ -62,27 +62,34 @@ int main(int ac, char **av)
 
     if(id == 0)
         {
-
-            //Child should close the output side of the pipe
+ 
+            // Child should close the output side of the pipe
             close(fd[1]);
-            
+
+            // Open the file "log.txt" for writing
             FILE *fptr = fopen("log.txt", "w");
             
-            //Read from the pipe
-            while((n = read(fd[0], buffer, MAX_BUFFER_LEN)>0))
+            // Child reads (continuously) from the pipe
+            while((n = read(fd[0], buffer, MAX_BUFFER_LEN)>0)) 
                 {
-                    printf("Child read %d bytes from parent: %s\n", n, buffer);
+                    // Print to the opened file 
                     fprintf(fptr,"%s", buffer);
+                    // Clear the output stream buffer
                     fflush(fptr);
                 }
-
+            
+            // Child closes the input side of the pipe
             close(fd[0]);
+            // Close the file
             fclose(fptr);
         }
     else
       {
+          // Parent should close the input side of the pipe
           close(fd[0]);
+          // Start the server
           startServer(PORTNUM);
+          // Wait for the child to complete
           wait(&status);
       }
 }
@@ -210,7 +217,6 @@ void deliverHTTP(int connfd)
 
 void writeLog(const char *format, ...)
 {
-  
 	char logBuffer[LOG_BUFFER_LEN];
 	va_list args;
 	
@@ -218,16 +224,12 @@ void writeLog(const char *format, ...)
 	vsprintf(logBuffer, format, args);
 	va_end(args);
 
-	printf("%s: %s\n", getCurrentTime(), logBuffer);
-
-
-        int n;
         char buffer[1024];
 
+        // Print to buffer
         sprintf(buffer, "%s: %s\n", getCurrentTime(), logBuffer);
-        n = write(fd[1], buffer, strlen(buffer)+1);
-        printf("Parent wrote %d bytes to the child: %s\n", n, buffer);
-
+        // Write buffer to the pipe 
+        write(fd[1], buffer, strlen(buffer)+1);
 }
 
 void startServer(uint16_t portNum)
@@ -270,20 +272,21 @@ void startServer(uint16_t portNum)
 
                 writeLog("Connection received");
                 
-                int cpid;
-                
-                if((cpid = fork()) != 0)
+                if(fork() != 0)
                     {
+                        // Parent 
                         close(connfd);
                     }
                 else
                     {
+                        // Child
                         close(listenfd);
+                        // Deliver connection
                         deliverHTTP(connfd);
                         close(connfd);
+
+                        // Close output side of the pipe
                         close(fd[1]);
                     }
-                
-		//deliverHTTP(connfd);
 	}
 }
