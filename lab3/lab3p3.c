@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <stdarg.h>
+#include <pthread.h>
 
 // Port Number
 #define PORTNUM			80
@@ -28,6 +29,8 @@
 
 // Maximum length of a filename
 #define MAX_FILENAME_LEN	128
+
+#define THREAD_LEN  10
 
 // HTTP methods
 enum
@@ -52,6 +55,9 @@ FILE *logfptr;
 // You can use this buffer to pass the string to write to the log to the
 // logger process
 char logBuffer[LOG_BUFFER_LEN];
+
+pthread_t thread[THREAD_LEN];
+int ctr = 0;
 
 // You can use this flag to tell the logger thread that the buffer contains valid data
 volatile int logReady=0;
@@ -195,6 +201,12 @@ void deliverHTTP(int connfd)
 	close(connfd);
 }
 
+void *child(void *t)
+{
+    ctr++;
+    deliverHTTP((long)t);
+    pthread_exit(NULL);
+}
 void writeLog(const char *format, ...)
 {
 	char myBuffer[LOG_BUFFER_LEN];
@@ -210,7 +222,7 @@ void writeLog(const char *format, ...)
 
 void startServer(uint16_t portNum)
 {
-	static int listenfd, connfd;
+	static long listenfd, connfd;
 	static struct sockaddr_in serv_addr;
 
 
@@ -246,7 +258,11 @@ void startServer(uint16_t portNum)
 	{
 		connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
 		writeLog("Connection received.");
-
-		deliverHTTP(connfd);
+                if(ctr < THREAD_LEN)
+                    {
+                        int currentCtr = ctr;
+                        pthread_create(&thread[currentCtr], NULL, child, (void *) connfd);
+                        pthread_detach(thread[currentCtr]);
+                    }
 	}
 }
