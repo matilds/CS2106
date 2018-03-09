@@ -30,6 +30,7 @@
 // Maximum length of a filename
 #define MAX_FILENAME_LEN	128
 
+// Maximum number of threads allowed
 #define THREAD_LEN  10
 
 // HTTP methods
@@ -56,7 +57,10 @@ FILE *logfptr;
 // logger process
 char logBuffer[LOG_BUFFER_LEN];
 
+// Global thread
 pthread_t thread[THREAD_LEN];
+
+// Global counter
 int ctr = 0;
 
 // You can use this flag to tell the logger thread that the buffer contains valid data
@@ -203,10 +207,16 @@ void deliverHTTP(int connfd)
 
 void *child(void *t)
 {
+    // Increase the thread counter
     ctr++;
+    
+    // Deliver the connection
     deliverHTTP((long)t);
+    
+    // Exit the thread
     pthread_exit(NULL);
 }
+
 void writeLog(const char *format, ...)
 {
 	char myBuffer[LOG_BUFFER_LEN];
@@ -258,10 +268,16 @@ void startServer(uint16_t portNum)
 	{
 		connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
 		writeLog("Connection received.");
+
+                // Check if the number of maximum threads is exceeded before threading
                 if(ctr < THREAD_LEN)
                     {
                         int currentCtr = ctr;
+
+                        // Start the thread
                         pthread_create(&thread[currentCtr], NULL, child, (void *) connfd);
+
+                        // Detach the thread
                         pthread_detach(thread[currentCtr]);
                     }
 	}
