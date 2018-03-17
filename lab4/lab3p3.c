@@ -64,38 +64,46 @@ int ctr = 0;
 // You can use this flag to tell the logger thread that the buffer contains valid data
 volatile int logReady=0;
 
+// Initialize the mutex
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int main(int ac, char **av)
 {
-	logfptr = fopen("webserver.log", "w");
-	if(logfptr == NULL)
+        pthread_t logThread;
+
+        logfptr = fopen("webserver.log", "w");
+
+        if(logfptr == NULL)
 	{
 		fprintf(stderr, "Cannot open log file\n");
 		exit(-1);
 	}
 
-        pthread_t logThread;
+        // The thread is created responsible to log safely
         pthread_create(&logThread, NULL, logToFile, NULL);
     
 	startServer(PORTNUM);
 
+        // Waiting for the logging thread to finish
         pthread_join(logThread, NULL);
 }
 
 void *logToFile(void *n){
     while (1){
-        while(logReady==0)
+        while(logReady == 0)
             
         fprintf(logfptr,"%s",logBuffer);
         fflush(logfptr);
         logReady = 0;
+
+        // When safely logged, the mutex is unlocked
         pthread_mutex_unlock(&mutex);
     }
     
     fclose(logfptr);
     pthread_exit(NULL);
 }
+
 char *getCurrentTime()
 {
 	time_t t = time(NULL);
@@ -247,9 +255,12 @@ void writeLog(const char *format, ...)
 
         while(logReady == 1)
 
+        // Thread will try to lock the mutex
         pthread_mutex_lock(&mutex);
+        // Thread enters if the lock was unlocked (else it is blocked)
+        
 	sprintf(logBuffer, "%s: %s", getCurrentTime(), myBuffer);
-	logReady=1;
+	logReady = 1;
 }
 
 void startServer(uint16_t portNum)
